@@ -53,21 +53,16 @@ def cmip6_download(variable_name = 'all', frequency_value = 'all', experiment_id
 
     url = 'https://esgf-node.llnl.gov/esg-search/search/?offset=0&limit=10000&type=Dataset&replica=false&latest=true&project=CMIP6&' + variable + frequency + experiment + model + '&facets=mip_era%2Cactivity_id%2Cmodel_cohort%2Cproduct%2Csource_id%2Cinstitution_id%2Csource_type%2Cnominal_resolution%2Cexperiment_id%2Csub_experiment_id%2Cvariant_label%2Cgrid_label%2Ctable_id%2Cfrequency%2Crealm%2Cvariable_id%2Ccf_standard_name%2Cdata_node&format=application%2Fsolr%2Bjson'
 
-    pool_search = multiprocessing.Pool(number_of_processes)
-
     #print('1- Searching for records...')
     with urllib.request.urlopen(url) as result_search:
         data = json.loads(result_search.read().decode())
         print('2- ' + str(len(data['response']['docs'])) + ' records found. Searching for files to download inside each record...')
         for doc in data['response']['docs']:
             url_files_search = 'https://esgf-node.llnl.gov/search_files/' + doc['id'] + '/' + doc['index_node'] + '/?limit=999&rnd=' + str(random.randint(100000, 999999))
-            pool_search.apply_async(get_files_to_download, args=[url_files_search])
-
-        pool_search.close()
-        pool_search.join()
+            get_files_to_download(url_files_search)
 
         #print('4- Downloading files...')
-        pool_download = multiprocessing.Pool(int(max(number_of_processes,len(files_to_download))))
+        pool_download = multiprocessing.Pool(int(min(number_of_processes,len(files_to_download))))
         index = 1
         for file_to_download in files_to_download:
             pool_download.apply_async(download_file, args=[file_to_download, variable_name + '_' + frequency_value + '_' + experiment_id + '_' + model_id, index])
